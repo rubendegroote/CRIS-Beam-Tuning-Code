@@ -1,22 +1,33 @@
 from PyQt4 import QtCore,QtGui
 from controls import ControlsGroup
 from graph import Graph
+from backend import controlLoop, Voltage, Beamline
+
+from copy import deepcopy
 
 class BeamlineApp(QtGui.QMainWindow):
 
     def __init__(self):
         super(BeamlineApp, self).__init__()
 
-        self.hotkeys = {QtCore.Qt.Key_F:'F',
-                        QtCore.Qt.Key_R:'R',
-                        QtCore.Qt.Key_D:'D',
-                        QtCore.Qt.Key_E:'E'}
+        self.beamline = Beamline()
 
         self.container = Container()
-        self.controlsGroup = ControlsGroup()
-        self.graph = Graph()
+        self.controlsGroup = ControlsGroup(self.beamline)
+        self.graph = Graph(self.beamline)
         self.init_UI()
         
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(30)
+
+    def update(self):
+        self.beamline.update()
+        for c in self.controlsGroup.controls.values():
+            c.update()
+        self.graph.updateGraph()
+
+
     def init_UI(self):
         self.setCentralWidget(self.container)
         self.container.layout.addWidget(self.graph,0,0)
@@ -44,17 +55,15 @@ class BeamlineApp(QtGui.QMainWindow):
         self.toolbar.addWidget(self.optimizeAction)
 
     def closeEvent(self,event):
-        self.controlsGroup.controlProcess.terminate()
-        for v in self.controlsGroup.voltages.values():
+        self.beamline.controlProcess.terminate()
+        for v in self.controlsGroup.beamline.voltages.values():
             v.stopRamp = True
         event.accept()
 
     def keyPressEvent(self,e):
-        if e.key() in self.hotkeys.keys():
-            self.controlsGroup.keyPressed(self.hotkeys[e.key()])
-            e.ignore()
-        else:
-            e.accept()
+        self.controlsGroup.keyPressed(e)
+        e.ignore()
+
 
 
 class Container(QtGui.QWidget):
