@@ -133,6 +133,7 @@ class Voltage(object):
         self.status = 'green'
 
         self.hasHotkeys = False
+        self.step = 1
 
     @property
     def readback(self):
@@ -183,6 +184,19 @@ class Voltage(object):
             
 
         self._ramping = False
+
+    def increase(self):
+        self.setpoint = self.setpoint + self.step
+    
+    def decrease(self):
+        self.setpoint = self.setpoint - self.step
+
+    def increaseStep(self):
+        self.step =  min(10**3,self.step*10)
+    
+    def decreaseStep(self):
+        self.step = max(1,self.step/10)
+
 
 def controlLoop(iQ,readback,current,stamp):
 

@@ -74,18 +74,6 @@ class Control(QtGui.QWidget):
         self.layout.addWidget(self.set,1,0,1,2)
         self.layout.addWidget(self.readback,2,0,1,2)
 
-    def increase(self):
-        self.set.setValue(self.set.value() + self.step)
-    
-    def decrease(self):
-        self.set.setValue(self.set.value() - self.step)
-
-    def increaseStep(self):
-        self.step =  min(10**3,self.step*10)
-    
-    def decreaseStep(self):
-        self.step = max(1,self.step/10)
-
     def valueChanged(self):
         self.voltage.setpoint = self.set.value()
 

@@ -27,8 +27,14 @@ class Graph(pg.PlotWidget):
 
     def plotData(self):
         self.plot(np.array(self.x),np.array(self.y),clear=True,pen = 'r')
-        self.plot([self.x0],[self.beamline.max],pen='r', symbol='o')
-
+        self.plot([self.x0],[self.beamline.max],pen='b',
+            symbol='o')
+        try:
+            self.plot([self.x[-1]],[self.y[-1]],pen='r',
+                symbol='o')
+        except IndexError:
+            pass
+            
     def clearPlot(self):
         self.x = []
         self.y = []

@@ -64,13 +64,13 @@ class HotkeyManager(QtCore.QObject):
         self.hotkeys[self.sender().voltage] = hotkeys
 
     def keyPressed(self,key):
-        for control,hotkeys in self.hotkeys.items():
+        for voltage,hotkeys in self.hotkeys.items():
             if key.key() in hotkeys:
                 if hotkeys[key.key()] == "Increase Voltage":
-                    control.increase()
+                    voltage.increase()
                 elif hotkeys[key.key()] == "Decrease Voltage":
-                    control.decrease()
+                    voltage.decrease()
                 elif hotkeys[key.key()] == "Increase Stepsize":
-                    control.increaseStep()
+                    voltage.increaseStep()
                 elif hotkeys[key.key()] == "Decrease Stepsize":
-                    control.decreaseStep()
+                    voltage.decreaseStep()
