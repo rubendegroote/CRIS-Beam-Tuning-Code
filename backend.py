@@ -27,6 +27,7 @@ class Beamline(object):
         self.last = 0
         self.max = 0
         self.optimalTime = time.time()
+        self.optimalSettings = self.voltages
 
         self.data = pd.DataFrame()
         
@@ -62,6 +63,19 @@ class Beamline(object):
         data['time'] = self.stamp.value
         # with pd.get_store('tuning_stream.h5') as store:
         #     store.append(data)
+
+    def saveSettings(self,fileName):
+        # Saves the settings to a .txt so they can easily be loaded next time.
+        with open(fileName,'w') as f:
+            for n,s in self.voltages.setpoints.items():
+                f.write(n + ';' + str(s))
+                f.write('\n')
+
+    def loadSettings(self,filename):
+        with open(filename,'r') as f:
+            for line in f.readlines():
+                name,value = line.split(';')
+                self.voltages[name].setpoint = float(value)
 
     def sendInstructions(self):
         instruction = {n:v.setpoint for n,v in self.voltages.items() if v.changed}
@@ -104,8 +118,6 @@ class Voltages(OrderedDict):
         data = np.array(data).reshape((-1, len(columns)))
 
         return pd.DataFrame(data,columns=columns)
-        
-
 
 class Voltage(object):
     def __init__(self,name,value=0):
@@ -119,6 +131,8 @@ class Voltage(object):
         self._ramping = False
         self._rampSet = 0
         self.status = 'green'
+
+        self.hasHotkeys = False
 
     @property
     def readback(self):

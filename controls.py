@@ -1,6 +1,8 @@
 from PyQt4 import QtCore,QtGui
 import pyqtgraph as pg
 import multiprocessing as mp
+import os
+from hotkey import HotkeyManager
 
 MAX_OFFSET = 5
 
@@ -10,7 +12,8 @@ class ControlsGroup(QtGui.QWidget):
         self.beamline = beamline
 
         self.controls = {}
-        self.controlHotkeys = {}
+        self.hotkeyManager = HotkeyManager(self)
+        self.optimizers = []
 
         self.init_UI()
 
@@ -19,56 +22,28 @@ class ControlsGroup(QtGui.QWidget):
 
         for i,(n,v) in enumerate(self.beamline.voltages.items()):
             control = Control(v)
-            control.newHotKeys.connect(self.defineHotkeys)
+            control.newHotKeys.connect(self.hotkeyManager.defineHotkeys)
             self.controls[n] = control
             self.layout.addWidget(control,i%2,i//2)
 
     def save(self):
-        for control in self.controls:
-            print(control.name,control.set.value())
-
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 
+            'Select file', os.getcwd(),"CSV (*.csv)")
+        self.beamline.saveSettings(fileName)
+            
     def load(self):
-        pass
+        fileName = QtGui.QFileDialog.getOpenFileName(self, 
+            'Select file', os.getcwd(),"CSV (*.csv)")
+        self.beamline.loadSettings(fileName)
 
     def optimize(self):
-        subset = [n for (n,c) in self.controls.items() if c.checked()]
-        self.showOptimizer(subset)
-
-    def showOptimizer(self,subset):
         from optimizer import Optimizer
+        op = Optimizer(parent=self,beamline=self.beamline)
+        op.closed.connect(self.removeOptimizer)
+        self.optimizers.append(op)
 
-        ok = Optimizer.optimize(parent=self,beamline=self.beamline,
-                    subset=subset)
-
-    def defineHotkeys(self,hotkeys):
-        toDelete = []
-        for control,hk in self.controlHotkeys.items():
-            for hk2 in hotkeys.keys():
-                if hk2 in hk.keys():
-                    toDelete.append(control)
-                    QtGui.QMessageBox.warning(self, "Hotkey Conflict",
-                        """Hotkey conflict. Removed keys for {}.""".format(control.voltage.name,))
-
-                    break
-
-        for td in toDelete:
-            del self.controlHotkeys[td]
-
-        self.controlHotkeys[self.sender()] = hotkeys
-
-    def keyPressed(self,key):
-        for control,hotkeys in self.controlHotkeys.items():
-            if key.key() in hotkeys:
-                if hotkeys[key.key()] == "Increase Voltage":
-                    control.increase()
-                elif hotkeys[key.key()] == "Decrease Voltage":
-                    control.decrease()
-                elif hotkeys[key.key()] == "Increase Stepsize":
-                    control.increaseStep()
-                elif hotkeys[key.key()] == "Decrease Stepsize":
-                    control.decreaseStep()
-
-
+    def removeOptimizer(self):
+        self.optimizers.remove(self.sender())
 
 class Control(QtGui.QWidget):
     newHotKeys = QtCore.Signal(dict)
@@ -76,19 +51,28 @@ class Control(QtGui.QWidget):
         super(Control,self).__init__()
         self.voltage = voltage
         self.step = 1
-        self.check = QtGui.QCheckBox(str(voltage.name))
+        
+        self.label = QtGui.QLabel(str(voltage.name))
+        
+        self.hotkeyButton = QtGui.QPushButton('H')
+        self.hotkeyButton.setMaximumWidth(25)
+        self.hotkeyButton.clicked.connect(self.makeHotkeys)
+
         self.set = pg.SpinBox(value=voltage.setpoint,
                               min = 0, max = 10**4,
                               step = 1)
         self.set.sigValueChanging.connect(self.valueChanged)
+        
         self.readback = QtGui.QLineEdit(str(voltage.readback))
+        
         self.init_UI()
 
     def init_UI(self):
         self.layout = QtGui.QGridLayout(self)
-        self.layout.addWidget(self.check,0,0)
-        self.layout.addWidget(self.set,1,0)
-        self.layout.addWidget(self.readback,2,0)
+        self.layout.addWidget(self.label,0,0,1,1)
+        self.layout.addWidget(self.hotkeyButton,0,1,1,1)
+        self.layout.addWidget(self.set,1,0,1,2)
+        self.layout.addWidget(self.readback,2,0,1,2)
 
     def increase(self):
         self.set.setValue(self.set.value() + self.step)
@@ -101,9 +85,6 @@ class Control(QtGui.QWidget):
     
     def decreaseStep(self):
         self.step = max(1,self.step/10)
-
-    def checked(self):
-        return self.check.checkState()
 
     def valueChanged(self):
         self.voltage.setpoint = self.set.value()
@@ -123,9 +104,14 @@ class Control(QtGui.QWidget):
         else:
             self.setStyleSheet("QLineEdit { background-color: green; }")
 
-    def mouseDoubleClickEvent(self,e):
+        if self.voltage.hasHotkeys:
+            self.hotkeyButton.setStyleSheet("QPushButton {background-color: green;}")
+        else:
+            self.hotkeyButton.setStyleSheet("")
+
+    def makeHotkeys(self,e):
         from hotkey import HotkeyPrompt
         hotkeys = HotkeyPrompt.hotkeys(parent=self)
         hotkeys = dict(zip(hotkeys.values(),hotkeys.keys()))
         self.newHotKeys.emit(hotkeys)
-
+        self.voltage.hasHotkeys = True
