@@ -49,19 +49,19 @@ class HotkeyManager(QtCore.QObject):
 
     def defineHotkeys(self,hotkeys):
         toDelete = []
-        for control,hk in self.hotkeys.items():
+        for voltage,hk in self.hotkeys.items():
             for hk2 in hotkeys.keys():
                 if hk2 in hk.keys():
-                    toDelete.append(control)
+                    toDelete.append(voltage)
                     QtGui.QMessageBox.warning(self.parentWidget, "Hotkey Conflict",\
-                """Hotkey conflict. Removed keys for {}.""".format(control.voltage.name))
-                    control.voltage.hasHotkeys = False
+                """Hotkey conflict. Removed keys for {}.""".format(voltage.name))
+                    voltage.hasHotkeys = False
                     break
 
         for td in toDelete:
             del self.hotkeys[td]
 
-        self.hotkeys[self.sender()] = hotkeys
+        self.hotkeys[self.sender().voltage] = hotkeys
 
     def keyPressed(self,key):
         for control,hotkeys in self.hotkeys.items():
