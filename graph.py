@@ -26,7 +26,7 @@ class Graph(pg.PlotWidget):
         self.x0 = self.beamline.optimalTime-self.start
 
     def plotData(self):
-        self.plot(np.array(self.x),np.array(self.y),clear=True,pen = 'r')
+        self.plot(np.array(self.x),np.array(self.y),clear=True,pen = 'g')
         self.plot([self.x0],[self.beamline.max],pen='r', symbol='o')
 
     def clearPlot(self):
