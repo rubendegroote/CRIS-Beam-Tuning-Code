@@ -1,0 +1,36 @@
+To Do for beam tuning program.
+
+1. Implement save and load features
+
+2. Implement advanced graph controls (like the labview ones)
+
+3. Implement data logging
+    - All data goes into a h5 store - simple!
+
+4. Change optimizer class to a widget rather than a Dialog
+    - Enable having several of them at once with different subsets of the controls
+    (of course only one optimizing at a time)
+
+5. Optimizer functionality
+    - Scan one voltage in a user-defined range
+    - Scan two voltages in a user-defined grid
+    - Optimize one/multiple voltage(s) with a simple linear optimization
+        - How well this will work in real life... we will see. 
+    - More advanced optimization (random walk stuff)
+
+6. Advanced beam tuning aids
+    - Save temporary configurations in memory for easy recall
+        - very advanced: double-clicking on the tune graph to recall settings at that 
+        point (requires a good implementation of point 3)
+    - Grouping of elements to a single control
+        e.g. combine the four elements of the triplet into one: increasing the voltage
+        on this combined element increases one of the four and automatically optimizes 
+        the other three for maximal current
+    - Simple optimization recipes
+        e.g. first tune element A, then B, then go back to A, etc.
+
+
+
+
+
+

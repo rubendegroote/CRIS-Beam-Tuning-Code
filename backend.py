@@ -7,7 +7,7 @@ import multiprocessing as mp
 import pandas as pd
 from copy import deepcopy
 
-RAMP = 10**4
+RAMP = 10**3
 
 class Beamline(object):
     def __init__(self):
