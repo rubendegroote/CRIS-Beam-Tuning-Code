@@ -11,6 +11,7 @@ class ControlsGroup(QtGui.QWidget):
 
         self.controls = {}
         self.controlHotkeys = {}
+        self.optimizers = []
 
         self.init_UI()
 
@@ -37,8 +38,8 @@ class ControlsGroup(QtGui.QWidget):
     def showOptimizer(self,subset):
         from optimizer import Optimizer
 
-        ok = Optimizer.optimize(parent=self,beamline=self.beamline,
-                    subset=subset)
+        self.optimizers.append(Optimizer(parent=self,beamline=self.beamline,
+                    subset=subset))
 
     def defineHotkeys(self,hotkeys):
         toDelete = []
@@ -67,8 +68,6 @@ class ControlsGroup(QtGui.QWidget):
                     control.increaseStep()
                 elif hotkeys[key.key()] == "Decrease Stepsize":
                     control.decreaseStep()
-
-
 
 class Control(QtGui.QWidget):
     newHotKeys = QtCore.Signal(dict)

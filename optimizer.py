@@ -28,7 +28,7 @@ class Optimizer(QtGui.QDialog):
     def init_UI(self):
         self.layout = QtGui.QGridLayout(self)
     
-        i = 0
+        i = 10
         for n,v in self.beamline.voltages.items():
             if n in self.subset:
                 copy = Control(v)
@@ -40,30 +40,24 @@ class Optimizer(QtGui.QDialog):
 
                 i = i + 1
 
-        buttons = QtGui.QDialogButtonBox(
-            QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel,
-            QtCore.Qt.Horizontal,self)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        self.layout.addWidget(buttons,10,i//2)
-
         self.scanButton = QtGui.QPushButton('Scan')
-        self.layout.addWidget(self.scanButton,9,i//2)
+        self.layout.addWidget(self.scanButton,i,i//2)
         self.scanButton.clicked.connect(self.startScan)
 
         self.stopButton = QtGui.QPushButton('Stop')
-        self.layout.addWidget(self.stopButton,9,i//2-1)
+        self.layout.addWidget(self.stopButton,i,i//2-1)
         self.stopButton.clicked.connect(self.stopScan)
 
         self.setOptimalButton = QtGui.QPushButton('Set to optimal values')
         self.setOptimalButton.clicked.connect(self.beamline.setToOptimal)
-        self.layout.addWidget(self.setOptimalButton,9,i//2-2)
+        self.layout.addWidget(self.setOptimalButton,i,i//2-2)
 
         self.layout.addWidget(self.graph,0,0,1,i//2)
 
         self.optimal = QtGui.QLabel()
         self.layout.addWidget(self.optimal,0,i//2,1,1)
 
+        self.show()
 
     def update(self):        
         for c in self.controls.values():
@@ -112,9 +106,6 @@ class Optimizer(QtGui.QDialog):
         else:
             e.accept()
 
-    @staticmethod
-    def optimize(parent,beamline,subset):
-        optimizer = Optimizer(parent,beamline,subset)
-        result = optimizer.exec_()
-        optimizer.cont = False
-        return result==QtGui.QDialog.Accepted
+    def closeEvent(self,event):
+        self.cont = False
+        super(Optimizer,self).close()

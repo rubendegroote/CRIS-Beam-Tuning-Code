@@ -27,7 +27,6 @@ class BeamlineApp(QtGui.QMainWindow):
             c.update()
         self.graph.updateGraph()
 
-
     def init_UI(self):
         self.setCentralWidget(self.container)
         self.container.layout.addWidget(self.graph,0,0)
@@ -38,21 +37,30 @@ class BeamlineApp(QtGui.QMainWindow):
         self.show()
 
     def makeToolbar(self):
-        self.toolbar = QtGui.QToolBar()
-        self.toolbar.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.addToolBar(self.toolbar)
+        menubar = self.menuBar()
 
-        self.saveAction = QtGui.QPushButton('Save',self)
-        self.saveAction.clicked.connect(self.controlsGroup.save)
-        self.toolbar.addWidget(self.saveAction)
+        self.saveAction = QtGui.QAction('&Save',self)
+        self.saveAction.setShortcut('Ctrl+S')
+        self.saveAction.setStatusTip('Save beam tuning parameters')
+        self.saveAction.triggered.connect(self.controlsGroup.save)
 
-        self.loadAction = QtGui.QPushButton('Load',self)
-        self.loadAction.clicked.connect(self.controlsGroup.load)
-        self.toolbar.addWidget(self.loadAction)
+        self.loadAction = QtGui.QAction('&Load',self)
+        self.loadAction.setShortcut('Ctrl+O')
+        self.loadAction.setStatusTip('Load beam tuning parameters')
+        self.loadAction.triggered.connect(self.controlsGroup.load)
 
-        self.optimizeAction = QtGui.QPushButton('Optimize',self)
-        self.optimizeAction.clicked.connect(self.controlsGroup.optimize)
-        self.toolbar.addWidget(self.optimizeAction)
+        fileMenu = menubar.addMenu('&File')
+        fileMenu.addAction(self.saveAction)
+        fileMenu.addAction(self.loadAction)
+
+        self.optimizeAction = QtGui.QAction('&Optimize',self)
+        self.optimizeAction.setShortcut('Ctrl+T')
+        self.optimizeAction.setStatusTip('Optimize beam tuning parameters')
+        self.optimizeAction.triggered.connect(self.controlsGroup.optimize)
+
+        beamMenu = menubar.addMenu('&Beamline')
+        beamMenu.addAction(self.optimizeAction)
+
 
     def closeEvent(self,event):
         self.beamline.controlProcess.terminate()

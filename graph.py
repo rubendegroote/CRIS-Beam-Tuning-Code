@@ -12,20 +12,21 @@ class Graph(pg.PlotWidget):
 
         self.x = []
         self.y = []
+        self.x0 = 0
 
         self.start = time.time()
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.plotData)
+        self.timer.start(30)
 
     def updateGraph(self):
         self.x.append(time.time()-self.start)
         self.y = np.append(self.y,self.beamline.current.value)
-        
         self.x0 = self.beamline.optimalTime-self.start
-
-        self.plotData()
 
     def plotData(self):
         self.plot(np.array(self.x),np.array(self.y),clear=True,pen = 'r')
-
         self.plot([self.x0],[self.beamline.max],pen='r', symbol='o')
 
     def clearPlot(self):
@@ -36,7 +37,6 @@ class Graph(pg.PlotWidget):
 class VoltGraph(Graph):
     def __init__(self,beamline,voltName):
         super(VoltGraph, self).__init__(beamline)
-
         self.voltName = voltName
 
     def updateGraph(self):
@@ -44,5 +44,4 @@ class VoltGraph(Graph):
         self.y = np.append(self.y,self.beamline.current.value)
         self.x0 = self.beamline.optimalSettings[self.voltName]
 
-        self.plotData()
 

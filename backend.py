@@ -27,6 +27,7 @@ class Beamline(object):
         self.last = 0
         self.max = 0
         self.optimalTime = time.time()
+        self.optimalSettings = self.voltages
 
         self.data = pd.DataFrame()
         
