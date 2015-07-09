@@ -73,9 +73,11 @@ class Optimizer(QtGui.QMainWindow):
         ok,controls = controlsPrompt.controls(self,
             [n for n in self.beamline.voltages.keys()])
 
-        self.addControls(controls)
+        self.subset = controls
 
-    def addControls(self,controls):
+        self.addControls()
+
+    def addControls(self):
         try:
             self.layout.removeWidget(self.controlsWidget)
             self.controlsWidget.setParent(None)
@@ -87,7 +89,7 @@ class Optimizer(QtGui.QMainWindow):
 
         i = 0
         for n,v in self.beamline.voltages.items():
-            if n in controls:
+            if n in self.subset:
                 copy = Control(v)
                 self.controls[n] = copy
                 controlsLayout.addWidget(copy,1+2*(i%2),i//2)
