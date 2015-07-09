@@ -1,6 +1,7 @@
 from PyQt4 import QtCore,QtGui
 import pyqtgraph as pg
 import multiprocessing as mp
+import os
 
 MAX_OFFSET = 5
 
@@ -25,11 +26,14 @@ class ControlsGroup(QtGui.QWidget):
             self.layout.addWidget(control,i%2,i//2)
 
     def save(self):
-        for control in self.controls:
-            print(control.name,control.set.value())
-
+        fileName = QtGui.QFileDialog.getSaveFileName(self, 
+            'Select file', os.getcwd(),"CSV (*.csv)")
+        self.beamline.saveSettings(fileName)
+            
     def load(self):
-        pass
+        fileName = QtGui.QFileDialog.getOpenFileName(self, 
+            'Select file', os.getcwd(),"CSV (*.csv)")
+        self.beamline.loadSettings(fileName)
 
     def optimize(self):
         subset = [n for (n,c) in self.controls.items() if c.checked()]

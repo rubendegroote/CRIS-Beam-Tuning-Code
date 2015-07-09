@@ -61,7 +61,6 @@ class BeamlineApp(QtGui.QMainWindow):
         beamMenu = menubar.addMenu('&Beamline')
         beamMenu.addAction(self.optimizeAction)
 
-
     def closeEvent(self,event):
         self.beamline.controlProcess.terminate()
         for v in self.controlsGroup.beamline.voltages.values():
