@@ -18,7 +18,6 @@ class HotkeyPrompt(QtGui.QDialog):
 
         self.init_UI()
 
-
     def init_UI(self):
         self.layout = QtGui.QGridLayout(self)
 
@@ -36,9 +35,42 @@ class HotkeyPrompt(QtGui.QDialog):
         self.keys[self.target] = e.key()
         self.labels[self.target].setText(e.text())
 
-
     @staticmethod
     def hotkeys(parent):
         hotkey = HotkeyPrompt(parent)
         result = hotkey.exec_()
         return hotkey.keys
+
+class HotkeyManager(QtCore.QObject):
+    def __init__(self,parentWidget):
+        super(HotkeyManager,self).__init__()
+        self.hotkeys = {}
+        self.parentWidget = parentWidget
+
+    def defineHotkeys(self,hotkeys):
+        toDelete = []
+        for control,hk in self.hotkeys.items():
+            for hk2 in hotkeys.keys():
+                if hk2 in hk.keys():
+                    toDelete.append(control)
+                    QtGui.QMessageBox.warning(self.parentWidget, "Hotkey Conflict",\
+                """Hotkey conflict. Removed keys for {}.""".format(control.voltage.name))
+                    control.voltage.hasHotkeys = False
+                    break
+
+        for td in toDelete:
+            del self.hotkeys[td]
+
+        self.hotkeys[self.sender()] = hotkeys
+
+    def keyPressed(self,key):
+        for control,hotkeys in self.hotkeys.items():
+            if key.key() in hotkeys:
+                if hotkeys[key.key()] == "Increase Voltage":
+                    control.increase()
+                elif hotkeys[key.key()] == "Decrease Voltage":
+                    control.decrease()
+                elif hotkeys[key.key()] == "Increase Stepsize":
+                    control.increaseStep()
+                elif hotkeys[key.key()] == "Decrease Stepsize":
+                    control.decreaseStep()

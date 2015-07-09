@@ -32,11 +32,11 @@ class BeamlineApp(QtGui.QMainWindow):
         self.container.layout.addWidget(self.graph,0,0)
         self.container.layout.addWidget(self.controlsGroup,1,0)
 
-        self.makeToolbar()
+        self.makeMenuBar()
 
         self.show()
 
-    def makeToolbar(self):
+    def makeMenuBar(self):
         menubar = self.menuBar()
 
         self.saveAction = QtGui.QAction('&Save',self)
@@ -68,10 +68,8 @@ class BeamlineApp(QtGui.QMainWindow):
         event.accept()
 
     def keyPressEvent(self,e):
-        self.controlsGroup.keyPressed(e)
+        self.controlsGroup.hotkeyManager.keyPressed(e)
         e.ignore()
-
-
 
 class Container(QtGui.QWidget):
     def __init__(self):

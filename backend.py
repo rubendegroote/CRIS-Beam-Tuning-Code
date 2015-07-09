@@ -132,6 +132,8 @@ class Voltage(object):
         self._rampSet = 0
         self.status = 'green'
 
+        self.hasHotkeys = False
+
     @property
     def readback(self):
         return int(self._readback)
