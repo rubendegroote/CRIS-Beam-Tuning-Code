@@ -29,6 +29,8 @@ class Beamline(object):
         self.optimalTime = time.time()
         self.optimalSettings = self.voltages
 
+        self.continueScanning = False
+
         self.data = pd.DataFrame()
         
         self.makeControlProcess()
@@ -56,6 +58,8 @@ class Beamline(object):
 
     def setToOptimal(self):
         self.voltages.setpoints = self.optimalSettings
+        while any([v.ramping for v in self.voltages.values()]):
+            time.sleep(0.05)
 
     def save(self):
         data = self.voltages.asDataFrame()
@@ -83,6 +87,29 @@ class Beamline(object):
             self.iQ.put(instruction)
             for n in instruction:
                 self.voltages[n].changed = False
+
+    def startScan(self, subset):
+        self.scanThread = th.Thread(target=self.scan,args=(subset,))
+        self.scanThread.start()
+
+    def stopScan(self):
+        self.continueScanning = False
+        for v in self.voltages.values():
+            v.stopScan()
+
+    def scan(self,subset):
+        self.continueScanning = True
+        for n,v in self.voltages.items():
+            if not self.continueScanning:
+                break
+
+            if n in subset:
+                self.scanVThread = th.Thread(target=v.scan)
+                self.scanVThread.start()
+                v.scanning = True
+                while v.scanning:
+                    time.sleep(0.1)
+                self.setToOptimal()
 
 class Voltages(OrderedDict):
     def __init__(self):
@@ -130,6 +157,10 @@ class Voltage(object):
         self.stopRamp = False
         self._ramping = False
         self._rampSet = 0
+
+        self.scanning = False
+        self.continueScanning = False
+
         self.status = 'green'
 
         self.hasHotkeys = False
@@ -152,6 +183,7 @@ class Voltage(object):
         if self._ramping:
             self.stopRamp = True
             time.sleep(0.01)
+        self._ramping = True
         self.rampThread = th.Thread(target=self.rampTo,args=(int(s),))
         self.rampThread.start()
 
@@ -165,7 +197,6 @@ class Voltage(object):
 
     def rampTo(self,s):
         self._rampSet = s
-        self._ramping = True
         self.stopRamp = False
         t0 = time.time()
         while abs(self._setpoint - s) > RAMP and not self.stopRamp:
@@ -181,9 +212,24 @@ class Voltage(object):
         if not self.stopRamp:
             self._setpoint = s
             self.changed = True
-            
 
         self._ramping = False
+
+    def scan(self):
+        self.continueScanning = True
+        for r in range(0,10**4,5):
+            if not self.continueScanning:
+                break
+
+            self.setpoint = r
+            while self._ramping and self.continueScanning:
+                time.sleep(0.05)
+            time.sleep(1.0)
+
+        self.scanning = False
+
+    def stopScan(self):
+        self.continueScanning = False
 
     def increase(self):
         self.setpoint = self.setpoint + self.step

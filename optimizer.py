@@ -13,19 +13,17 @@ class Optimizer(QtGui.QMainWindow):
 
         self.beamline = beamline
         self.subset = []
+        self.cont = False
 
         self.controls = {}
         self.hotkeyManager = parent.hotkeyManager
         self.voltGraphs = {}
 
-        self.graph = Graph(self.beamline)
         self.init_UI()
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(50)
-
-        self.updateGraph = False
 
         self.chooseControls()
 
@@ -35,8 +33,7 @@ class Optimizer(QtGui.QMainWindow):
         self.layout = QtGui.QGridLayout(widget)
     
         self.optimal = QtGui.QLabel()
-        self.layout.addWidget(self.optimal,0,1,1,1)
-        self.layout.addWidget(self.graph,0,0,1,1)
+        self.layout.addWidget(self.optimal,100,1,1,1)
 
         self.makeMenuBar()
         self.show()
@@ -92,10 +89,10 @@ class Optimizer(QtGui.QMainWindow):
             if n in self.subset:
                 copy = Control(v)
                 self.controls[n] = copy
-                controlsLayout.addWidget(copy,1+2*(i%2),i//2)
+                controlsLayout.addWidget(copy,2*(i%2),i//2)
 
                 self.voltGraphs[n] = VoltGraph(self.beamline,n)
-                controlsLayout.addWidget(self.voltGraphs[n],2+2*(i%2),i//2)
+                controlsLayout.addWidget(self.voltGraphs[n],1+2*(i%2),i//2)
 
                 i = i + 1
 
@@ -105,9 +102,6 @@ class Optimizer(QtGui.QMainWindow):
         for c in self.controls.values():
             c.update()
 
-        if self.updateGraph:
-            self.graph.updateGraph()
-
         for g in self.voltGraphs.values():
             g.updateGraph()
 
@@ -116,31 +110,10 @@ class Optimizer(QtGui.QMainWindow):
         self.optimal.setText(text)
 
     def startScan(self):
-        self.cont = True
-        self.graph.clearPlot()
-        self.scanThread = th.Thread(target = self.scan)
-        self.scanThread.start()
+        self.beamline.startScan(self.subset)
 
     def stopScan(self):
-        self.cont = False
-
-    def scan(self):
-        self.updateGraph = True
-        ra = np.linspace(0,10**4,100)
-        for n,v in self.beamline.voltages.items():
-            if n in self.subset:
-                for r in ra:
-                    if self.cont:
-                        v.setpoint = r
-                        time.sleep(0.5)
-                    else:
-                        break
-                if not self.cont:
-                    break
-                self.beamline.setToOptimal()
-
-        self.updateGraph = False
-
+        self.beamline.stopScan()
 
     def keyPressEvent(self,e):
         if e.key() == QtCore.Qt.Key_Enter:
@@ -149,10 +122,8 @@ class Optimizer(QtGui.QMainWindow):
             self.hotkeyManager.keyPressed(e)
             e.ignore()
 
-
-
     def closeEvent(self,event):
-        self.cont = False
+        self.stopScan()
         self.closed.emit()
         super(Optimizer,self).close()
 

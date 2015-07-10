@@ -78,6 +78,8 @@ class Control(QtGui.QWidget):
         self.voltage.setpoint = self.set.value()
 
     def update(self):
+        self.set.sigValueChanging.disconnect(self.valueChanged)
+
         if self.voltage.ramping:
             self.set.setValue(self.voltage.rampSet)
         else:
@@ -96,6 +98,8 @@ class Control(QtGui.QWidget):
             self.hotkeyButton.setStyleSheet("QPushButton {background-color: green;}")
         else:
             self.hotkeyButton.setStyleSheet("")
+
+        self.set.sigValueChanging.connect(self.valueChanged)
 
     def makeHotkeys(self,e):
         from hotkey import HotkeyPrompt
