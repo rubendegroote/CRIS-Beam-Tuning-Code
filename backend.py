@@ -160,6 +160,9 @@ class Voltage(object):
 
         self.scanning = False
         self.continueScanning = False
+        self.scanStart = 0
+        self.scanStop = 0
+        self.scanStepsize = 0
 
         self.status = 'green'
 
@@ -217,7 +220,7 @@ class Voltage(object):
 
     def scan(self):
         self.continueScanning = True
-        for r in range(0,10**4,5):
+        for r in np.arange(self.scanStart,self.scanStop,self.scanStepsize):
             if not self.continueScanning:
                 break
 

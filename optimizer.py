@@ -1,5 +1,5 @@
 from PyQt4 import QtCore,QtGui
-from controls import Control
+from controls import Control, ScanControl
 import threading as th
 import numpy as np
 import time
@@ -33,7 +33,7 @@ class Optimizer(QtGui.QMainWindow):
         self.layout = QtGui.QGridLayout(widget)
     
         self.optimal = QtGui.QLabel()
-        self.layout.addWidget(self.optimal,100,1,1,1)
+        self.layout.addWidget(self.optimal,0,0,1,1)
 
         self.makeMenuBar()
         self.show()
@@ -87,16 +87,16 @@ class Optimizer(QtGui.QMainWindow):
         i = 0
         for n,v in self.beamline.voltages.items():
             if n in self.subset:
-                copy = Control(v)
-                self.controls[n] = copy
-                controlsLayout.addWidget(copy,2*(i%2),i//2)
+                control = ScanControl(v)
+                self.controls[n] = control
+                controlsLayout.addWidget(control,2*(i%2),i//2)
 
                 self.voltGraphs[n] = VoltGraph(self.beamline,n)
                 controlsLayout.addWidget(self.voltGraphs[n],1+2*(i%2),i//2)
 
                 i = i + 1
 
-        self.layout.addWidget(self.controlsWidget,1,0,1,2)
+        self.layout.addWidget(self.controlsWidget,0,1,1,2)
 
     def update(self):        
         for c in self.controls.values():

@@ -50,7 +50,6 @@ class Control(QtGui.QWidget):
     def __init__(self,voltage):
         super(Control,self).__init__()
         self.voltage = voltage
-        self.step = 1
         
         self.label = QtGui.QLabel(str(voltage.name))
         
@@ -107,3 +106,45 @@ class Control(QtGui.QWidget):
         hotkeys = dict(zip(hotkeys.values(),hotkeys.keys()))
         self.newHotKeys.emit(hotkeys)
         self.voltage.hasHotkeys = True
+
+class ScanControl(QtGui.QWidget):
+    def __init__(self,voltage):
+        super(ScanControl,self).__init__()
+        self.voltage = voltage
+
+        self.name = QtGui.QLabel(self.voltage.name)
+
+        self.startBox = pg.SpinBox(value=0,
+                              min = 0, max = 10**4,
+                              step = 1)
+        self.startBox.valueChanged.connect(self.defineScan)
+        self.stopBox = pg.SpinBox(value=10**4,
+                              min = 0, max = 10**4,
+                              step = 1)
+        self.stopBox.valueChanged.connect(self.defineScan)
+        self.stepSizeBox = pg.SpinBox(value=100,
+                              min = 0, max = 10**4,
+                              step = 1)
+        self.stepSizeBox.valueChanged.connect(self.defineScan)
+
+        layout = QtGui.QGridLayout(self)
+        layout.addWidget(self.name,0,0)
+        layout.addWidget(QtGui.QLabel("From:"),1,0)
+        layout.addWidget(self.startBox,2,0)
+        layout.addWidget(QtGui.QLabel("To:"),1,1)
+        layout.addWidget(self.stopBox,2,1)
+        layout.addWidget(QtGui.QLabel("Steps:"),1,2)
+        layout.addWidget(self.stepSizeBox,2,2)
+
+
+
+    def update(self):
+        if self.voltage.scanning:
+            self.name.setText(self.voltage.name + '\t SCANNING')
+        else:
+            self.name.setText(self.voltage.name)
+
+    def defineScan(self):
+        self.voltage.scanStepsize = self.stepSizeBox.value()
+        self.voltage.scanStart = self.startBox.value()
+        self.voltage.scanStop = self.stopBox.value() + self.voltage.scanStepsize
