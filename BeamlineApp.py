@@ -2,6 +2,7 @@ from PyQt4 import QtCore,QtGui
 from controls import ControlsGroup
 from graph import Graph
 from backend import controlLoop, Voltage, Beamline
+from hotkey import HotkeyManager
 
 from copy import deepcopy
 
@@ -11,12 +12,14 @@ class BeamlineApp(QtGui.QMainWindow):
         super(BeamlineApp, self).__init__()
 
         self.beamline = Beamline()
+        self.optimizers = []
+        self.hotkeyManager = HotkeyManager(self)
 
         self.container = Container()
-        self.controlsGroup = ControlsGroup(self.beamline)
-        self.graph = Graph(self.beamline)
+        self.controlsGroup = ControlsGroup(self)
+        self.graph = Graph(self)
         self.init_UI()
-        
+
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(30)
@@ -56,11 +59,20 @@ class BeamlineApp(QtGui.QMainWindow):
         self.optimizeAction = QtGui.QAction('&Optimize',self)
         self.optimizeAction.setShortcut('Ctrl+T')
         self.optimizeAction.setStatusTip('Optimize beam tuning parameters')
-        self.optimizeAction.triggered.connect(self.controlsGroup.optimize)
+        self.optimizeAction.triggered.connect(self.optimize)
 
         beamMenu = menubar.addMenu('&Beamline')
         beamMenu.addAction(self.optimizeAction)
 
+    def optimize(self):
+        from optimizer import Optimizer
+        op = Optimizer(parent=self,beamline=self.beamline)
+        op.closed.connect(self.removeOptimizer)
+        self.optimizers.append(op)
+
+    def removeOptimizer(self):
+        self.optimizers.remove(self.sender())
+        
     def closeEvent(self,event):
         self.beamline.controlProcess.terminate()
         for v in self.controlsGroup.beamline.voltages.values():

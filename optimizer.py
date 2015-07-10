@@ -31,9 +31,6 @@ class Optimizer(QtGui.QMainWindow):
         widget = QtGui.QWidget()
         self.setCentralWidget(widget)
         self.layout = QtGui.QGridLayout(widget)
-    
-        self.optimal = QtGui.QLabel()
-        self.layout.addWidget(self.optimal,0,0,1,1)
 
         self.makeMenuBar()
         self.show()
@@ -91,7 +88,7 @@ class Optimizer(QtGui.QMainWindow):
                 self.controls[n] = control
                 controlsLayout.addWidget(control,2*(i%2),i//2)
 
-                self.voltGraphs[n] = VoltGraph(self.beamline,n)
+                self.voltGraphs[n] = VoltGraph(self,n)
                 controlsLayout.addWidget(self.voltGraphs[n],1+2*(i%2),i//2)
 
                 i = i + 1
@@ -105,11 +102,10 @@ class Optimizer(QtGui.QMainWindow):
         for g in self.voltGraphs.values():
             g.updateGraph()
 
-        text = [n + ': ' + str(v) for n,v in self.beamline.optimalSettings.items()]
-        text = "\n".join(text)
-        self.optimal.setText(text)
-
     def startScan(self):
+        for c in self.controls.values():
+            c.defineScan()
+
         self.beamline.startScan(self.subset)
 
     def stopScan(self):

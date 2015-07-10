@@ -2,18 +2,16 @@ from PyQt4 import QtCore,QtGui
 import pyqtgraph as pg
 import multiprocessing as mp
 import os
-from hotkey import HotkeyManager
 
 MAX_OFFSET = 5
 
 class ControlsGroup(QtGui.QWidget):
-    def __init__(self,beamline):
+    def __init__(self,parent):
         super(ControlsGroup, self).__init__()
-        self.beamline = beamline
+        self.beamline = parent.beamline
 
         self.controls = {}
-        self.hotkeyManager = HotkeyManager(self)
-        self.optimizers = []
+        self.hotkeyManager = parent.hotkeyManager
 
         self.init_UI()
 
@@ -35,15 +33,6 @@ class ControlsGroup(QtGui.QWidget):
         fileName = QtGui.QFileDialog.getOpenFileName(self, 
             'Select file', os.getcwd(),"CSV (*.csv)")
         self.beamline.loadSettings(fileName)
-
-    def optimize(self):
-        from optimizer import Optimizer
-        op = Optimizer(parent=self,beamline=self.beamline)
-        op.closed.connect(self.removeOptimizer)
-        self.optimizers.append(op)
-
-    def removeOptimizer(self):
-        self.optimizers.remove(self.sender())
 
 class Control(QtGui.QWidget):
     newHotKeys = QtCore.Signal(dict)
@@ -117,15 +106,12 @@ class ScanControl(QtGui.QWidget):
         self.startBox = pg.SpinBox(value=0,
                               min = 0, max = 10**4,
                               step = 1)
-        self.startBox.valueChanged.connect(self.defineScan)
         self.stopBox = pg.SpinBox(value=10**4,
                               min = 0, max = 10**4,
                               step = 1)
-        self.stopBox.valueChanged.connect(self.defineScan)
         self.stepSizeBox = pg.SpinBox(value=100,
                               min = 0, max = 10**4,
                               step = 1)
-        self.stepSizeBox.valueChanged.connect(self.defineScan)
 
         layout = QtGui.QGridLayout(self)
         layout.addWidget(self.name,0,0)
@@ -137,12 +123,11 @@ class ScanControl(QtGui.QWidget):
         layout.addWidget(self.stepSizeBox,2,2)
 
 
-
     def update(self):
         if self.voltage.scanning:
-            self.name.setText(self.voltage.name + '\t SCANNING')
+            self.setStyleSheet("ScanControl {border: 20px solid black;}")
         else:
-            self.name.setText(self.voltage.name)
+            self.setStyleSheet("")
 
     def defineScan(self):
         self.voltage.scanStepsize = self.stepSizeBox.value()

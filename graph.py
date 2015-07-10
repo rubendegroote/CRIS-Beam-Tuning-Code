@@ -6,9 +6,9 @@ import time
 
 class Graph(pg.PlotWidget):
     """docstring for Graph"""
-    def __init__(self,beamline):
+    def __init__(self,parent):
         super(Graph, self).__init__()
-        self.beamline = beamline
+        self.beamline = parent.beamline
 
         self.x = []
         self.y = []
@@ -24,6 +24,8 @@ class Graph(pg.PlotWidget):
         self.x.append(time.time()-self.start)
         self.y = np.append(self.y,self.beamline.current.value)
         self.x0 = self.beamline.optimalTime-self.start
+        
+        self.plotItem.setTitle('Current {:.2}'.format(self.beamline.current.value))
 
     def plotData(self):
         self.plot(np.array(self.x),np.array(self.y),clear=True,pen = 'r')
@@ -34,20 +36,22 @@ class Graph(pg.PlotWidget):
                 symbol='o')
         except IndexError:
             pass
-            
+
     def clearPlot(self):
         self.x = []
         self.y = []
         self.clear()
 
 class VoltGraph(Graph):
-    def __init__(self,beamline,voltName):
-        super(VoltGraph, self).__init__(beamline)
+    def __init__(self,parent,voltName):
+        super(VoltGraph, self).__init__(parent)
         self.voltName = voltName
 
     def updateGraph(self):
         self.x.append(self.beamline.voltages[self.voltName].readback)
         self.y = np.append(self.y,self.beamline.current.value)
         self.x0 = self.beamline.optimalSettings[self.voltName]
-
-
+        
+        title = 'Current {:.2} \t Voltage {} \t Best Voltage {}'.format(
+                            self.beamline.current.value,self.x[-1],self.x0)
+        self.plotItem.setTitle(title)
