@@ -2,6 +2,7 @@ from PyQt4 import QtCore,QtGui
 import pyqtgraph as pg
 import multiprocessing as mp
 import os
+import time
 
 MAX_OFFSET = 5
 
@@ -21,6 +22,7 @@ class ControlsGroup(QtGui.QWidget):
         for i,(n,v) in enumerate(self.beamline.voltages.items()):
             control = Control(v)
             control.newHotKeys.connect(self.hotkeyManager.defineHotkeys)
+            control.newValue.connect(self.beamline.wait)
             self.controls[n] = control
             self.layout.addWidget(control,i%2,i//2)
 
@@ -36,6 +38,7 @@ class ControlsGroup(QtGui.QWidget):
 
 class Control(QtGui.QWidget):
     newHotKeys = QtCore.Signal(dict)
+    newValue = QtCore.Signal()
     def __init__(self,voltage):
         super(Control,self).__init__()
         self.voltage = voltage
@@ -64,6 +67,7 @@ class Control(QtGui.QWidget):
 
     def valueChanged(self):
         self.voltage.setpoint = self.set.value()
+        self.newValue.emit()
 
     def update(self):
         self.set.sigValueChanging.disconnect(self.valueChanged)

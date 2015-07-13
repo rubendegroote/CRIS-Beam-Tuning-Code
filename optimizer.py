@@ -5,11 +5,11 @@ import numpy as np
 import time
 from graph import Graph, VoltGraph
 
-class Optimizer(QtGui.QMainWindow):
-    """docstring for Optimizer"""
+class OptimizerWidget(QtGui.QMainWindow):
+    """docstring for OptimizerWidget"""
     closed = QtCore.Signal()
     def __init__(self,parent,beamline):
-        super(Optimizer, self).__init__(parent)
+        super(OptimizerWidget, self).__init__(parent)
 
         self.beamline = beamline
         self.subset = []
@@ -25,7 +25,11 @@ class Optimizer(QtGui.QMainWindow):
         self.timer.timeout.connect(self.update)
         self.timer.start(50)
 
-        self.chooseControls()
+        ok = self.chooseControls()
+        if ok:
+            self.show()
+        else:
+            self.close()
 
     def init_UI(self):
         widget = QtGui.QWidget()
@@ -33,7 +37,6 @@ class Optimizer(QtGui.QMainWindow):
         self.layout = QtGui.QGridLayout(widget)
 
         self.makeMenuBar()
-        self.show()
 
     def makeMenuBar(self):
         menubar = self.menuBar()
@@ -46,10 +49,9 @@ class Optimizer(QtGui.QMainWindow):
         self.setOptimalAction.setShortcut('Ctrl+O')
         self.setOptimalAction.triggered.connect(self.beamline.setToOptimal)
 
-        optimizerMenu = menubar.addMenu('&Optimizer')
-        optimizerMenu.addAction(self.chooseAction)
-        optimizerMenu.addAction(self.setOptimalAction)
-
+        settingsMenu = menubar.addMenu('&Settings')
+        settingsMenu.addAction(self.chooseAction)
+        settingsMenu.addAction(self.setOptimalAction)
 
         self.scanAction = QtGui.QAction('&Scan',self)
         self.scanAction.setShortcut('Ctrl+S')
@@ -62,19 +64,30 @@ class Optimizer(QtGui.QMainWindow):
         scanMenu = menubar.addMenu('&Scanning')
         scanMenu.addAction(self.scanAction)
         scanMenu.addAction(self.stopAction)
+
+        self.optimizeAction = QtGui.QAction('O&ptimize',self)
+        self.optimizeAction.setShortcut('Ctrl+P')
+        self.optimizeAction.triggered.connect(self.optimize)
+
+        optimizeMenu = menubar.addMenu('&Optimizer')
+        optimizeMenu.addAction(self.optimizeAction)
         
     def chooseControls(self):
-        ok,controls = controlsPrompt.controls(self,
-            [n for n in self.beamline.voltages.keys()])
+        ok,mode,controls = modePrompt.mode(self,
+            [n for n in self.beamline.voltages.keys()],self.subset)
 
         self.subset = controls
 
-        self.addControls()
+        self.addControls(mode)
 
-    def addControls(self):
+        return ok
+
+    def addControls(self,mode):
         try:
             self.layout.removeWidget(self.controlsWidget)
             self.controlsWidget.setParent(None)
+            self.controls = {}
+            self.voltGraphs = {}
         except:
             pass
 
@@ -111,41 +124,56 @@ class Optimizer(QtGui.QMainWindow):
     def stopScan(self):
         self.beamline.stopScan()
 
+    def optimize(self):
+        for c in self.controls.values():
+            c.defineScan()
+            
+        self.beamline.optimize(self.subset)
+
     def keyPressEvent(self,e):
-        if e.key() == QtCore.Qt.Key_Enter:
-            e.ignore()
-        else:
-            self.hotkeyManager.keyPressed(e)
-            e.ignore()
+        self.hotkeyManager.keyPressed(e)
+        super(QtGui.QMainWindow,self).keyPressEvent(e)
 
     def closeEvent(self,event):
         self.stopScan()
         self.closed.emit()
-        super(Optimizer,self).close()
+        super(OptimizerWidget,self).close()
 
-class controlsPrompt(QtGui.QDialog):
-    """docstring for controlsPrompt"""
-    def __init__(self,parent,names):
-        super(controlsPrompt, self).__init__(parent)
+class modePrompt(QtGui.QDialog):
+    """docstring for modePrompt"""
+    def __init__(self,parent,names,subset):
+        super(modePrompt, self).__init__(parent)
+        self.names = names
 
-        self.layout = QtGui.QGridLayout(self)
+        layout = QtGui.QGridLayout(self)
 
-        self.checks = {}
+        self.modes = QtGui.QComboBox()
+        self.modes.addItems(['Optimizer'])
+        layout.addWidget(self.modes,0,0)
 
-        for i,n in enumerate(names):
-            self.checks[n] = QtGui.QCheckBox(n)
-            self.layout.addWidget(self.checks[n],i,0)
+        self.modeWidget = QtGui.QWidget()
+        self.layout = QtGui.QGridLayout(self.modeWidget)
+        layout.addWidget(self.modeWidget,1,0)
+
     
         buttons = QtGui.QDialogButtonBox(
             QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel,
             QtCore.Qt.Horizontal,self)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        self.layout.addWidget(buttons,100,100)
+        layout.addWidget(buttons,2,0)
+
+        self.checks = {}
+
+        for i,n in enumerate(self.names):
+            self.checks[n] = QtGui.QCheckBox(n)
+            if n in subset:
+                self.checks[n].setChecked(True)
+            self.layout.addWidget(self.checks[n],i,0)
 
     @staticmethod
-    def controls(parent,names):
-        ctrls = controlsPrompt(parent,names)
-        result = ctrls.exec_()
-        return result == QtGui.QDialog.Accepted, \
-                [n for n,c in ctrls.checks.items() if c.checkState()]
+    def mode(parent,names, subset):
+        modes = modePrompt(parent,names,subset)
+        result = modes.exec_()
+        return result == QtGui.QDialog.Accepted, modes.modes.currentIndex(),\
+                [n for n,c in modes.checks.items() if c.checkState()]

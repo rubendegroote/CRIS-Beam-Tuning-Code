@@ -1,4 +1,6 @@
 from PyQt4 import QtCore,QtGui
+import threading as th
+
 from controls import ControlsGroup
 from graph import Graph
 from backend import controlLoop, Voltage, Beamline
@@ -25,7 +27,6 @@ class BeamlineApp(QtGui.QMainWindow):
         self.timer.start(30)
 
     def update(self):
-        self.beamline.update()
         for c in self.controlsGroup.controls.values():
             c.update()
         self.graph.updateGraph()
@@ -65,23 +66,24 @@ class BeamlineApp(QtGui.QMainWindow):
         beamMenu.addAction(self.optimizeAction)
 
     def optimize(self):
-        from optimizer import Optimizer
-        op = Optimizer(parent=self,beamline=self.beamline)
+        from optimizer import OptimizerWidget
+        op = OptimizerWidget(parent=self,beamline=self.beamline)
         op.closed.connect(self.removeOptimizer)
         self.optimizers.append(op)
 
     def removeOptimizer(self):
         self.optimizers.remove(self.sender())
-        
+
     def closeEvent(self,event):
         self.beamline.controlProcess.terminate()
+        self.beamline.stop = True
         for v in self.controlsGroup.beamline.voltages.values():
             v.stopRamp = True
         event.accept()
 
     def keyPressEvent(self,e):
         self.controlsGroup.hotkeyManager.keyPressed(e)
-        e.ignore()
+        e.accept()
 
 class Container(QtGui.QWidget):
     def __init__(self):

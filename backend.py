@@ -2,27 +2,31 @@ import time
 import numpy as np
 import threading as th
 from PyQt4 import QtCore,QtGui
-from collections import OrderedDict
+from collections import OrderedDict, deque
 import multiprocessing as mp
 import pandas as pd
 from copy import deepcopy
+from optimization import Optimizer
 
-RAMP = 10**3
+RAMP = 10**4
 
 class Beamline(object):
     def __init__(self):
         super(Beamline,self).__init__()
+        self.voltages = Voltages()
         
-        self.iQ = mp.Queue()
+        self.manager = mp.Manager()
         self.current = mp.Value('d',0.0)
         self.stamp = mp.Value('d',0.0)
-        self.voltages = Voltages()
-        self.manager = mp.Manager()
         self.readback = self.manager.dict()
+        self.setpoints = self.manager.dict()
         for i in range(10):
-            name = 'Control {}'.format(str(i))
+            name = 'Control_{}'.format(str(i))
             self.voltages[name] = Voltage(name=name)
             self.readback[name] = 0
+        self.newEvent = mp.Event()
+        self.intrSentEvent = mp.Event()
+        self.changedEvent = mp.Event()
 
         self.last = 0
         self.max = 0
@@ -32,21 +36,31 @@ class Beamline(object):
         self.continueScanning = False
 
         self.data = pd.DataFrame()
+
+        self.optimizer = Optimizer(self)
         
         self.makeControlProcess()
 
+        th.Timer(0,self.update).start()
+        self.stop = False
+
     def makeControlProcess(self):
         self.controlProcess = mp.Process(target = controlLoop, 
-            args = (self.iQ,self.readback,self.current,self.stamp,))
+            args = (self.setpoints,self.readback,self.current,self.stamp,
+                self.newEvent,self.intrSentEvent,self.changedEvent,))
         self.controlProcess.start()
 
     def update(self):
-        self.sendInstructions()
-        
-        self.save()
+        for n,v in self.voltages.setpoints.items():
+            self.setpoints[n]=v
 
+        if self.newEvent.is_set():
+            self.intrSentEvent.set()
+            self.newEvent.clear()
+            
         self.voltages.readback=self.readback
 
+        self.save()
         if not self.current.value == self.last:
             self.last = self.current.value
             self.lastTime = self.stamp.value
@@ -55,6 +69,18 @@ class Beamline(object):
             self.max = self.last
             self.optimalTime = self.lastTime
             self.optimalSettings = self.voltages.readback
+
+        if not self.stop:
+            th.Timer(0.01,self.update).start()
+
+    def wait(self):
+        while any([v.ramping for v in self.voltages.values()]):
+            time.sleep(0.001)
+
+        self.newEvent.set()
+
+        self.changedEvent.wait()
+        self.changedEvent.clear()
 
     def setToOptimal(self):
         self.voltages.setpoints = self.optimalSettings
@@ -81,13 +107,6 @@ class Beamline(object):
                 name,value = line.split(';')
                 self.voltages[name].setpoint = float(value)
 
-    def sendInstructions(self):
-        instruction = {n:v.setpoint for n,v in self.voltages.items() if v.changed}
-        if len(instruction)>0:
-            self.iQ.put(instruction)
-            for n in instruction:
-                self.voltages[n].changed = False
-
     def startScan(self, subset):
         self.scanThread = th.Thread(target=self.scan,args=(subset,))
         self.scanThread.start()
@@ -110,6 +129,10 @@ class Beamline(object):
                 while v.scanning:
                     time.sleep(0.1)
                 self.setToOptimal()
+
+    def optimize(self,subset):
+        self.optimizeThread = th.Thread(target=self.optimizer.start, args = (subset,))
+        self.optimizeThread.start()
 
 class Voltages(OrderedDict):
     def __init__(self):
@@ -179,7 +202,7 @@ class Voltage(object):
 
     @property
     def setpoint(self):
-        return int(self._setpoint)
+        return self._setpoint
 
     @setpoint.setter
     def setpoint(self,s):
@@ -187,7 +210,7 @@ class Voltage(object):
             self.stopRamp = True
             time.sleep(0.01)
         self._ramping = True
-        self.rampThread = th.Thread(target=self.rampTo,args=(int(s),))
+        self.rampThread = th.Thread(target=self.rampTo,args=(s,))
         self.rampThread.start()
 
     @property
@@ -247,33 +270,27 @@ class Voltage(object):
         self.step = max(1,self.step/10)
 
 
-def controlLoop(iQ,readback,current,stamp):
+def controlLoop(setpoints,readback,current,stamp,
+        newEvent,intrSentEvent,changedEvent):
 
-    setpoints = {n:0 for n in readback.keys()}
     r0 = np.random.randint(10**4,size=10)
 
     while True:
-        try:
-            changes = iQ.get_nowait()
-            for n,c in changes.items():
-                setpoints[n] = c
 
-                #also change hardware here
-
-        except:
-            pass
-
-        for n in readback.keys():
-            readback[n] = setpoints[n] + np.random.rand()
+        for n in setpoints.keys():
+            readback[n] = setpoints[n] #+ np.random.rand()
         
         curr = 1
-
         for i,r in enumerate(readback.values()):
             curr *= (1 - (r-r0[i])**2/10**8)
-
         current.value = curr
+
+        if intrSentEvent.is_set():
+            changedEvent.set()
+            intrSentEvent.clear()
+
 
         stamp.value = time.time()
 
-        time.sleep(0.01)
+        time.sleep(0.001)
 
