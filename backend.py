@@ -24,6 +24,8 @@ class Beamline(object):
             name = 'Control_{}'.format(str(i))
             self.voltages[name] = Voltage(name=name)
             self.readback[name] = 0
+            self.setpoints[name] = 0
+
         self.newEvent = mp.Event()
         self.intrSentEvent = mp.Event()
         self.changedEvent = mp.Event()
@@ -31,7 +33,7 @@ class Beamline(object):
         self.last = 0
         self.max = 0
         self.optimalTime = time.time()
-        self.optimalSettings = self.voltages
+        self.optimalSettings = self.voltages.setpoints
 
         self.continueScanning = False
 
@@ -130,8 +132,8 @@ class Beamline(object):
                     time.sleep(0.1)
                 self.setToOptimal()
 
-    def optimize(self,subset):
-        self.optimizeThread = th.Thread(target=self.optimizer.start, args = (subset,))
+    def optimize(self,subset,method):
+        self.optimizeThread = th.Thread(target=self.optimizer.start, args = (subset,method,))
         self.optimizeThread.start()
 
 class Voltages(OrderedDict):
@@ -186,8 +188,6 @@ class Voltage(object):
         self.scanStart = 0
         self.scanStop = 0
         self.scanStepsize = 0
-
-        self.status = 'green'
 
         self.hasHotkeys = False
         self.step = 1
@@ -273,17 +273,18 @@ class Voltage(object):
 def controlLoop(setpoints,readback,current,stamp,
         newEvent,intrSentEvent,changedEvent):
 
-    r0 = np.random.randint(10**4,size=10)
+    r0={}
+    for i in range(10):
+        r0['Control_' + str(i)] = 5000
 
     while True:
-
         for n in setpoints.keys():
-            readback[n] = setpoints[n] #+ np.random.rand()
+            readback[n] = setpoints[n]
         
         curr = 1
-        for i,r in enumerate(readback.values()):
-            curr *= (1 - (r-r0[i])**2/10**8)
-        current.value = curr
+        for n,r in readback.items():
+            curr *= max(0, 1 - 4*(r-r0[n])**2/10**8)
+        current.value = curr  + np.random.normal()*  0.05 * curr
 
         if intrSentEvent.is_set():
             changedEvent.set()

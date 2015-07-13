@@ -65,12 +65,17 @@ class OptimizerWidget(QtGui.QMainWindow):
         scanMenu.addAction(self.scanAction)
         scanMenu.addAction(self.stopAction)
 
-        self.optimizeAction = QtGui.QAction('O&ptimize',self)
-        self.optimizeAction.setShortcut('Ctrl+P')
-        self.optimizeAction.triggered.connect(self.optimize)
+        self.optimizeChiSqAction = QtGui.QAction('O&ptimize',self)
+        self.optimizeChiSqAction.setShortcut('Ctrl+P')
+        self.optimizeChiSqAction.triggered.connect(self.optimize)
+
+        self.optimizeBayesAction = QtGui.QAction('&Bayesian Optimize',self)
+        self.optimizeBayesAction.setShortcut('Ctrl+B')
+        self.optimizeBayesAction.triggered.connect(self.optimize)
 
         optimizeMenu = menubar.addMenu('&Optimizer')
-        optimizeMenu.addAction(self.optimizeAction)
+        optimizeMenu.addAction(self.optimizeChiSqAction)
+        optimizeMenu.addAction(self.optimizeBayesAction)
         
     def chooseControls(self):
         ok,mode,controls = modePrompt.mode(self,
@@ -127,8 +132,11 @@ class OptimizerWidget(QtGui.QMainWindow):
     def optimize(self):
         for c in self.controls.values():
             c.defineScan()
-            
-        self.beamline.optimize(self.subset)
+
+        if self.sender() == self.optimizeChiSqAction:
+            self.beamline.optimize(self.subset,'chisq')
+        else:
+            self.beamline.optimize(self.subset,'bayes')
 
     def keyPressEvent(self,e):
         self.hotkeyManager.keyPressed(e)
