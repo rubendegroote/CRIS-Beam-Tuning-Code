@@ -8,6 +8,7 @@ from hotkey import HotkeyManager
 
 from copy import deepcopy
 
+
 class BeamlineApp(QtGui.QMainWindow):
 
     def __init__(self):

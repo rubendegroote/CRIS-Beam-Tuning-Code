@@ -17,6 +17,7 @@ class Beamline(object):
         
         self.manager = mp.Manager()
         self.current = mp.Value('d',0.0)
+        self.current_std = mp.Value('d',0.0)
         self.stamp = mp.Value('d',0.0)
         self.readback = self.manager.dict()
         self.setpoints = self.manager.dict()
@@ -25,10 +26,6 @@ class Beamline(object):
             self.voltages[name] = Voltage(name=name)
             self.readback[name] = 0
             self.setpoints[name] = 0
-
-        self.newEvent = mp.Event()
-        self.intrSentEvent = mp.Event()
-        self.changedEvent = mp.Event()
 
         self.last = 0
         self.max = 0
@@ -48,17 +45,12 @@ class Beamline(object):
 
     def makeControlProcess(self):
         self.controlProcess = mp.Process(target = controlLoop, 
-            args = (self.setpoints,self.readback,self.current,self.stamp,
-                self.newEvent,self.intrSentEvent,self.changedEvent,))
+            args = (self.setpoints,self.readback,self.current,self.current_std,self.stamp,))
         self.controlProcess.start()
 
     def update(self):
         for n,v in self.voltages.setpoints.items():
             self.setpoints[n]=v
-
-        if self.newEvent.is_set():
-            self.intrSentEvent.set()
-            self.newEvent.clear()
             
         self.voltages.readback=self.readback
 
@@ -78,11 +70,6 @@ class Beamline(object):
     def wait(self):
         while any([v.ramping for v in self.voltages.values()]):
             time.sleep(0.001)
-
-        self.newEvent.set()
-
-        self.changedEvent.wait()
-        self.changedEvent.clear()
 
     def setToOptimal(self):
         self.voltages.setpoints = self.optimalSettings
@@ -133,6 +120,7 @@ class Beamline(object):
                 self.setToOptimal()
 
     def optimize(self,subset,method):
+        self.continueScanning = True
         self.optimizeThread = th.Thread(target=self.optimizer.start, args = (subset,method,))
         self.optimizeThread.start()
 
@@ -194,11 +182,11 @@ class Voltage(object):
 
     @property
     def readback(self):
-        return int(self._readback)
+        return self._readback
 
     @readback.setter
     def readback(self,r):
-        self._readback = int(r)
+        self._readback = r
 
     @property
     def setpoint(self):
@@ -268,30 +256,3 @@ class Voltage(object):
     
     def decreaseStep(self):
         self.step = max(1,self.step/10)
-
-
-def controlLoop(setpoints,readback,current,stamp,
-        newEvent,intrSentEvent,changedEvent):
-
-    r0={}
-    for i in range(10):
-        r0['Control_' + str(i)] = 5000
-
-    while True:
-        for n in setpoints.keys():
-            readback[n] = setpoints[n]
-        
-        curr = 1
-        for n,r in readback.items():
-            curr *= max(0, 1 - 4*(r-r0[n])**2/10**8)
-        current.value = curr  + np.random.normal()*  0.05 * curr
-
-        if intrSentEvent.is_set():
-            changedEvent.set()
-            intrSentEvent.clear()
-
-
-        stamp.value = time.time()
-
-        time.sleep(0.001)
-

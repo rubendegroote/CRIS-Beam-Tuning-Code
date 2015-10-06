@@ -65,18 +65,24 @@ class OptimizerWidget(QtGui.QMainWindow):
         scanMenu.addAction(self.scanAction)
         scanMenu.addAction(self.stopAction)
 
-        self.optimizeChiSqAction = QtGui.QAction('O&ptimize',self)
-        self.optimizeChiSqAction.setShortcut('Ctrl+P')
-        self.optimizeChiSqAction.triggered.connect(self.optimize)
-
         self.optimizeBayesAction = QtGui.QAction('&Bayesian Optimize',self)
         self.optimizeBayesAction.setShortcut('Ctrl+B')
         self.optimizeBayesAction.triggered.connect(self.optimize)
 
+        self.optimizeMCMCAction = QtGui.QAction('&MCMC Optimize',self)
+        self.optimizeMCMCAction.setShortcut('Ctrl+M')
+        self.optimizeMCMCAction.triggered.connect(self.optimize)
+
+        self.optimizeMyMCMCAction = QtGui.QAction('&My MCMC Optimize',self)
+        self.optimizeMyMCMCAction.setShortcut('Ctrl+N')
+        self.optimizeMyMCMCAction.triggered.connect(self.optimize)
+
         optimizeMenu = menubar.addMenu('&Optimizer')
-        optimizeMenu.addAction(self.optimizeChiSqAction)
         optimizeMenu.addAction(self.optimizeBayesAction)
-        
+        optimizeMenu.addAction(self.optimizeMCMCAction)
+        optimizeMenu.addAction(self.optimizeMyMCMCAction)
+
+
     def chooseControls(self):
         ok,mode,controls = modePrompt.mode(self,
             [n for n in self.beamline.voltages.keys()],self.subset)
@@ -133,10 +139,13 @@ class OptimizerWidget(QtGui.QMainWindow):
         for c in self.controls.values():
             c.defineScan()
 
-        if self.sender() == self.optimizeChiSqAction:
-            self.beamline.optimize(self.subset,'chisq')
-        else:
+        if self.sender() == self.optimizeBayesAction:
             self.beamline.optimize(self.subset,'bayes')
+        elif self.sender() == self.optimizeMyMCMCAction:
+            self.beamline.optimize(self.subset,'my mcmc')
+        else:
+            self.beamline.optimize(self.subset,'mcmc')
+
 
     def keyPressEvent(self,e):
         self.hotkeyManager.keyPressed(e)

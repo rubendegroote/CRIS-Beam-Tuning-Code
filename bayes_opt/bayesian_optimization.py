@@ -303,11 +303,11 @@ class BayesianOptimization(object):
 
         # ------------------------------ // ------------------------------ // ------------------------------ #
         # Fitting the gaussian process.
-        gp = GP(theta0=0.01*numpy.ones(self.dim),\
-                thetaU=0.2*numpy.ones(self.dim),\
-                thetaL=0.0005*numpy.ones(self.dim),\
-                random_start=15)
-
+        # gp = GP(theta0=0.01*numpy.ones(self.dim),\
+        #         thetaU=0.2*numpy.ones(self.dim),\
+        #         thetaL=0.0005*numpy.ones(self.dim),\
+        #         random_start=15)
+        gp = GP()
         gp.set_params(**gp_params)
 
         # Find unique rows of X to avoid GP from breaking

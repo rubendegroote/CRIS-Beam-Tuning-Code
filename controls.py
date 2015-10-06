@@ -49,12 +49,10 @@ class Control(QtGui.QWidget):
         self.hotkeyButton.setMaximumWidth(25)
         self.hotkeyButton.clicked.connect(self.makeHotkeys)
 
-        self.set = pg.SpinBox(value=voltage.setpoint,
-                              min = 0, max = 10**4,
-                              step = 1)
+        self.set = Spin(text=str(voltage.setpoint))
         self.set.sigValueChanging.connect(self.valueChanged)
         
-        self.readback = QtGui.QLineEdit(str(voltage.readback))
+        self.readback = ReadBack(str(voltage.readback))
         
         self.init_UI()
 
@@ -66,32 +64,30 @@ class Control(QtGui.QWidget):
         self.layout.addWidget(self.readback,2,0,1,2)
 
     def valueChanged(self):
-        self.voltage.setpoint = self.set.value()
+        self.voltage.setpoint = self.set.value
         self.newValue.emit()
 
     def update(self):
-        self.set.sigValueChanging.disconnect(self.valueChanged)
-
         if self.voltage.ramping:
-            self.set.setValue(self.voltage.rampSet)
+            if not self.set.value == self.voltage.rampSet:
+                self.set.value = self.voltage.rampSet
         else:
-            self.set.setValue(self.voltage.setpoint)
+            if not self.set.value == self.voltage.setpoint:
+                self.set.value = self.voltage.setpoint
 
         self.readback.setText(str(self.voltage.readback))
                 
         if abs(self.voltage.setpoint - self.voltage.readback) > MAX_OFFSET:
-            self.setStyleSheet("QLineEdit { background-color: red; }")
+            self.setStyleSheet("ReadBack { background-color: red; }")
         elif abs(self.voltage.rampSet - self.voltage.readback) > MAX_OFFSET:
-            self.setStyleSheet("QLineEdit { background-color: yellow; }")
+            self.setStyleSheet("ReadBack { background-color: yellow; }")
         else:
-            self.setStyleSheet("QLineEdit { background-color: green; }")
+            self.setStyleSheet("ReadBack { background-color: green; }")
 
         if self.voltage.hasHotkeys:
             self.hotkeyButton.setStyleSheet("QPushButton {background-color: green;}")
         else:
             self.hotkeyButton.setStyleSheet("")
-
-        self.set.sigValueChanging.connect(self.valueChanged)
 
     def makeHotkeys(self,e):
         from hotkey import HotkeyPrompt
@@ -137,3 +133,60 @@ class ScanControl(QtGui.QWidget):
         self.voltage.scanStepsize = self.stepSizeBox.value()
         self.voltage.scanStart = self.startBox.value()
         self.voltage.scanStop = self.stopBox.value() + self.voltage.scanStepsize
+
+
+
+class Spin(QtGui.QLineEdit):
+    sigValueChanging = QtCore.pyqtSignal()
+    def __init__(self,*args,**kwargs):
+        super(Spin,self).__init__(*args,**kwargs)
+
+        self._value = int(self.text())
+
+        self.min = 0
+        self.max = 10**4
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self,val):
+        val = int(val)
+        val = max(self.min,val)
+        val = min(self.max,val)
+        self._value = val
+
+        l = len(self.text())
+        pos = self.cursorPosition()
+        self.setText(str(self.value))
+        if l < len(self.text()):
+            pos = pos + 1
+        elif l < len(self.text()): 
+            pos = pos - 1
+        self.setCursorPosition(pos)
+
+    def setText(self,text):
+        self._value = int(text)
+        super(Spin,self).setText(text)
+
+    def keyPressEvent(self,e):
+        text = self.text()
+        if e.key() == QtCore.Qt.Key_Up or e.key() == QtCore.Qt.Key_Down:
+            pos = self.cursorPosition()
+            change = 10**(len(self.text())-pos)
+            if e.key() == QtCore.Qt.Key_Down:
+                change = - change
+
+            self.value = self.value + change
+        
+        else:
+            super(Spin,self).keyPressEvent(e)
+
+        if not text == self.text():
+            self.value = self.text()
+            self.sigValueChanging.emit()
+
+class ReadBack(QtGui.QLineEdit):
+    def __init__(self,*args,**kwargs):
+        super(ReadBack,self).__init__(*args,**kwargs)
