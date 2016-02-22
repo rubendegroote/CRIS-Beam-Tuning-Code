@@ -1,7 +1,6 @@
 
 
 def voltages_loop(setpoints,readback,current,current_std,stamp):
-
     r0={}
     for i in range(10):
         r0['Control_' + str(i)] = 5000

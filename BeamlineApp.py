@@ -3,7 +3,7 @@ import threading as th
 
 from controls import ControlsGroup
 from graph import Graph
-from backend import controlLoop, Voltage, Beamline
+from backend import voltages_loop, Voltage, Beamline
 from hotkey import HotkeyManager
 
 from copy import deepcopy

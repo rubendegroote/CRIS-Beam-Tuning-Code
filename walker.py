@@ -106,3 +106,24 @@ class Walkers(list):
                 w.jump_to_other(best_walker)
 
 
+# no_of_controls = 20
+# r0=[]
+# for i in range(no_of_controls):
+#     r0.append(5000)
+
+# def to_optimize(vrs):
+#     global r0
+#     currs = []
+#     for j in range(no_of_controls):
+#         curr = 1
+#         for i,r in enumerate(vrs):
+#             curr *= max(0, 1 - 4*(r-r0[i])**2/10**4)
+#         currs.append(curr*(1+0.2*np.random.rand(1)))    
+#     return np.mean(currs),np.std(currs)/np.sqrt(len(currs))
+
+# ndim, nwalkers = len(r0),10*len(r0)
+# pos = [r*(1+np.random.rand()*0.01-0.005) for r in r0]
+# w = Walkers(nwalkers,pos,10,1,to_optimize)
+
+# while True:
+#     w.walk_all()

@@ -84,16 +84,16 @@ class OptimizerWidget(QtGui.QMainWindow):
 
 
     def chooseControls(self):
-        ok,mode,controls = modePrompt.mode(self,
+        ok,controls = modePrompt.mode(self,
             [n for n in self.beamline.voltages.keys()],self.subset)
 
         self.subset = controls
 
-        self.addControls(mode)
+        self.addControls()
 
         return ok
 
-    def addControls(self,mode):
+    def addControls(self):
         try:
             self.layout.removeWidget(self.controlsWidget)
             self.controlsWidget.setParent(None)
@@ -164,9 +164,9 @@ class modePrompt(QtGui.QDialog):
 
         layout = QtGui.QGridLayout(self)
 
-        self.modes = QtGui.QComboBox()
-        self.modes.addItems(['Optimizer'])
-        layout.addWidget(self.modes,0,0)
+        # self.modes = QtGui.QComboBox()
+        # self.modes.addItems(['Optimizer'])
+        # layout.addWidget(self.modes,0,0)
 
         self.modeWidget = QtGui.QWidget()
         self.layout = QtGui.QGridLayout(self.modeWidget)
@@ -178,7 +178,7 @@ class modePrompt(QtGui.QDialog):
             QtCore.Qt.Horizontal,self)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons,2,0)
+        layout.addWidget(buttons,20,0)
 
         self.checks = {}
 
@@ -186,11 +186,11 @@ class modePrompt(QtGui.QDialog):
             self.checks[n] = QtGui.QCheckBox(n)
             if n in subset:
                 self.checks[n].setChecked(True)
-            self.layout.addWidget(self.checks[n],i,0)
+            layout.addWidget(self.checks[n],i,0)
 
     @staticmethod
     def mode(parent,names, subset):
         modes = modePrompt(parent,names,subset)
         result = modes.exec_()
-        return result == QtGui.QDialog.Accepted, modes.modes.currentIndex(),\
+        return result == QtGui.QDialog.Accepted,\
                 [n for n,c in modes.checks.items() if c.checkState()]
